@@ -35,7 +35,7 @@ public class MainViewer extends Application {
 
         Text scenetitle = new Text("Welcome");
         scenetitle.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
-        grid.add(scenetitle, 0, 0, 3, 1);
+        grid.add(scenetitle, 0, 0, 2, 1);
 
         Label userName = new Label("User Name:");
         grid.add(userName, 0, 1);
