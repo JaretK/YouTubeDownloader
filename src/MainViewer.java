@@ -1,5 +1,10 @@
 
+import javax.script.ScriptEngineManager;
+
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -20,17 +25,23 @@ public class MainViewer extends Application {
 	 * sets grid lines to active
 	 */
 	private static final boolean DEBUG = true;
+	
 	/*
 	 * Controls the H and V spacing of the grid and the spacing of the 
 	 * buttons HBox
 	 */
 	private static final double SPACING = 10;
+	
+	/*
+	 * instance variables for the text field contents
+	 */
+	private String songField, artistField, optionsField;
 
 	public static void main(String[] args) {
 		launch(args);
 	}
 	/*
-	 * Taken from:
+	 * Supplemented with:
 	 * http://docs.oracle.com/javase/8/javafx/get-started-tutorial/form.htm
 	 */
 	@Override
@@ -92,6 +103,39 @@ public class MainViewer extends Application {
 		buttonsHBOX.setAlignment(Pos.BOTTOM_CENTER);
 		buttonsHBOX.getChildren().addAll(quitBTN, runBTN);
 		grid.add(buttonsHBOX,0,4,2,1);
+		
+		/*
+		 * Add event handlers to the buttons using anonymous functions
+		 */
+		quitBTN.setOnAction(new EventHandler<ActionEvent>(){
+			
+			public void handle(ActionEvent e){
+				//Exit. May throw a "ava has been detached already"
+				//error, but that isn't a problem 
+				Platform.exit();
+			}
+			
+		});
+		runBTN.setOnAction(new EventHandler<ActionEvent>(){
+
+			@Override
+			public void handle(ActionEvent event) {
+				//get textFields
+				songField = songNameTextField.getText();
+				artistField = artistNameTextField.getText();
+				optionsField = optionsTextField.getText();
+				
+				//clear textFields
+				songNameTextField.clear();
+				artistNameTextField.clear();
+				optionsTextField.clear();
+				
+				//USE PYTHON SUBPROCESS TO REDIRECT PRINT STATEMENTS?
+				
+				
+			}
+			
+		});
 
 		/*
 		 * Scene constructor details:
@@ -107,4 +151,5 @@ public class MainViewer extends Application {
 
 		primaryStage.show();
 	}
+
 }
