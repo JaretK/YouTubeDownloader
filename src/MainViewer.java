@@ -1,5 +1,16 @@
 
-import javax.script.ScriptEngineManager;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -7,10 +18,16 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
@@ -25,17 +42,29 @@ public class MainViewer extends Application {
 	 * sets grid lines to active
 	 */
 	private static final boolean DEBUG = true;
-	
+
 	/*
 	 * Controls the H and V spacing of the grid and the spacing of the 
 	 * buttons HBox
 	 */
 	private static final double SPACING = 10;
-	
+
 	/*
-	 * instance variables for the text field contents
+	 * Gets the current OS
+	 */
+	private static final String OPERATING_SYSTEM = System.getProperty("os.name");
+
+	/*
+	 * instance variables for the text field contents and textArea
 	 */
 	private String songField, artistField, optionsField;
+	private TextArea textArea;
+
+	/*
+	 * logging object and associated DateFormat
+	 */
+	private Logger myLogger;
+	private static final DateFormat lOG_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss.SSS");
 
 	public static void main(String[] args) {
 		launch(args);
@@ -46,14 +75,24 @@ public class MainViewer extends Application {
 	 */
 	@Override
 	public void start(Stage primaryStage) {
+		//make logger and filehandler (to tmp directory 'cause its just to diagnose errors for myself)
+		myLogger = Logger.getLogger(this.getClass().getName());
+		initLogger();
+		/*
+		 * make boarderpane root
+		 */
+		BorderPane bpRoot = new BorderPane();
+
 		//Set the title for our primary stage
 		primaryStage.setTitle("Welcome to YouTubeDownloader");
 
 		//Create the GridPane layout
 		GridPane grid = new GridPane();
+		bpRoot.setCenter(grid);
 		grid.setAlignment(Pos.TOP_CENTER);
 		grid.setHgap(SPACING);//H width between cols
 		grid.setVgap(SPACING);//V height between rows
+
 		/*
 		 * adds padding inset
 		 * constructor details:
@@ -62,16 +101,27 @@ public class MainViewer extends Application {
 		 */
 		grid.setPadding(new Insets(25,25,25,25));
 
+
+		/*
+		 * Make MenuBar
+		 */
+		MenuBar menuBar = new MenuBar();
+
+		Menu fileMenu = new Menu("File");
+		Menu prefMenu = new Menu("Preferences");
+
+		menuBar.getMenus().addAll(fileMenu, prefMenu);
+		bpRoot.setTop(menuBar);
+
 		//Add the scenetitle and text fields
 		Text scenetitle = new Text("Enter Song Information");
 		scenetitle.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
 		/*
 		Described within https://docs.oracle.com/javafx/2/api/javafx/scene/layout/GridPane.html as:
-
 		add(Node child, int columnIndex, int rowIndex, int colspan, int rowspan)
 		Adds a child to the gridpane at the specified column,row position and spans.
 
-		*/
+		 */
 		grid.add(scenetitle, 0,0,2,1);
 
 		Label songName = new Label("Song Name:");
@@ -91,30 +141,30 @@ public class MainViewer extends Application {
 
 		//displays the gridLines for debugging
 		grid.setGridLinesVisible(DEBUG);
-		
+
 		/*
 		 * Make the exit and run buttons
 		 */
 		HBox buttonsHBOX = new HBox(SPACING);
 		Button quitBTN = new Button("Exit");
-		quitBTN.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 		Button runBTN = new Button("Run");
-		runBTN.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 		buttonsHBOX.setAlignment(Pos.BOTTOM_CENTER);
 		buttonsHBOX.getChildren().addAll(quitBTN, runBTN);
+		cleanUpHBOX(buttonsHBOX);
+
 		grid.add(buttonsHBOX,0,4,2,1);
-		
+
 		/*
 		 * Add event handlers to the buttons using anonymous functions
 		 */
 		quitBTN.setOnAction(new EventHandler<ActionEvent>(){
-			
+
 			public void handle(ActionEvent e){
 				//Exit. May throw a "ava has been detached already"
 				//error, but that isn't a problem 
 				Platform.exit();
 			}
-			
+
 		});
 		runBTN.setOnAction(new EventHandler<ActionEvent>(){
 
@@ -124,17 +174,67 @@ public class MainViewer extends Application {
 				songField = songNameTextField.getText();
 				artistField = artistNameTextField.getText();
 				optionsField = optionsTextField.getText();
-				
+
+				//check contents. Options field is optional and therefore can be omitted from check
+				if(!fieldsValid(songField, artistField)){
+					//records the problematic field
+					List<String> errList = new ArrayList<String>();
+					if(!fieldsValid(songField)) errList.add("Song Field");
+					if(!fieldsValid(artistField)) errList.add("Artist Field");
+
+					myLogger.log(Level.SEVERE, "A TextBox field parameter is missing("+errList.toString()+"). Clearing and starting over");
+					System.err.println("A TextBox field parameter is missing");
+					System.err.print("Check: ");
+					System.err.println(errList);
+					clearFields(songNameTextField, artistNameTextField, optionsTextField);
+					return;
+				}
+
 				//clear textFields
 				songNameTextField.clear();
 				artistNameTextField.clear();
 				optionsTextField.clear();
-				
+
+				//only make the text Area and minimize button if maximized
+				//problematic because I create a new textArea each time, but efficiency can be improved later
+				if(textArea == null){
+					//if clicked, add new TextArea -> ScrollPane to scene
+					textArea = new TextArea();
+					textArea.setWrapText(false);
+					//width,height
+					textArea.setPrefSize(400, 400);
+
+
+					grid.getChildren().remove(buttonsHBOX);
+					grid.add(textArea,0,4,2,1);
+					primaryStage.sizeToScene();
+
+					//make minimize button
+					Button minimizeBTN = new Button("Minimize");
+					minimizeBTN.setOnAction(new EventHandler<ActionEvent>(){
+						//removes scrollpane and minimize button
+						public void handle(ActionEvent event) {
+							grid.getChildren().remove(buttonsHBOX);
+							grid.getChildren().remove(textArea);
+							grid.add(buttonsHBOX,0,4,2,1);
+							buttonsHBOX.getChildren().remove(minimizeBTN);
+							textArea = null;
+							primaryStage.sizeToScene();
+						}
+
+					});
+					buttonsHBOX.getChildren().add(minimizeBTN);
+					cleanUpHBOX(buttonsHBOX);
+					grid.add(buttonsHBOX,0,5,2,1);
+				}
 				//USE PYTHON SUBPROCESS TO REDIRECT PRINT STATEMENTS?
-				
-				
+				try {
+					handToPython(textArea, songField, artistField, optionsField);
+				} catch (IOException | InterruptedException e) {
+					myLogger.severe(e.getMessage());
+				}
 			}
-			
+
 		});
 
 		/*
@@ -146,10 +246,96 @@ public class MainViewer extends Application {
 		 * to display all the elements
 		 */
 		//Scene scene = new Scene(grid, 300, 275);
-		Scene scene = new Scene(grid);
+		Scene scene = new Scene(bpRoot);
 		primaryStage.setScene(scene);
 
 		primaryStage.show();
+	}
+
+	private void handToPython(TextArea dataField, String... arguments) throws IOException, InterruptedException{
+
+		if(arguments.length != 3){
+			myLogger.log(Level.SEVERE, "Hand off to python failed. Argument missing (length = "+arguments.length+")");
+			System.err.println("Argument missing in call. Args length: "+arguments.length);
+		}
+		ProcessBuilder procB = new ProcessBuilder("python", "Resources/ytdl_test.py", arguments[0], arguments[1], arguments[2]);
+		Process proc = procB.start();
+		
+		//RUN PROCESS AND CONCURRENTLY SEND TO TEXTAREA... It shouldn't be this difficult
+
+	}
+	/**
+	 * Clears all TextFields inputted into the method
+	 * @param fields: TextFields to be cleared
+	 */
+	private void clearFields(TextField... fields){
+		for (int i = 0; i < fields.length; i++)
+			fields[i].clear();
+	}
+
+	/**
+	 * 
+	 * @param fields: string value of textfields being checked 
+	 * @return false if any field is equal to an empty string 
+	 */
+	private boolean fieldsValid(String... fields){
+		for (int i = 0; i < fields.length; i++)
+			if(fields[i].equals("")) return false;
+		return true;
+	}
+
+	/**
+	 * Loops through the elements of the input box and changes their fields
+	 * inputBox should be sufficiently small enough that optimization is 
+	 * unnecessary
+	 * @param inputBox, HBox to clean up
+	 */
+	private void cleanUpHBOX(HBox inputBox){
+		for (Node nodeEle : inputBox.getChildren()){
+			Button buttonEle = (Button) nodeEle;
+			buttonEle.setPrefSize(100,20);
+			buttonEle.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+		}
+	}
+	
+	private void appendLine(TextArea tArea, String toAppend){
+		tArea.appendText(toAppend+"\n");
+	}
+
+	private void initLogger(){
+		Handler loggerHandler;
+		try {
+			loggerHandler = new FileHandler("/tmp/YTDL_Logger.log");
+			loggerHandler.setFormatter(new Formatter(){
+				@Override
+				public String format(LogRecord record) {
+					StringBuilder builder = new StringBuilder(1000);
+					builder.append("(");
+					builder.append(lOG_DATE_FORMAT.format(new Date(record.getMillis()))).append(") - ");
+					builder.append("[").append(record.getSourceClassName()).append(".");
+					builder.append(record.getSourceMethodName()).append("]\n");
+					builder.append("<").append(record.getLevel()).append("> - ");
+					builder.append(formatMessage(record));
+					builder.append("\n");
+					return builder.toString();
+				}
+			});
+			loggerHandler.setLevel(Level.ALL);
+			myLogger.addHandler(loggerHandler);
+			myLogger.info("YouTubeDownloader Logging File Initialized");
+			myLogger.info("Running on "+OPERATING_SYSTEM);
+			if(!OPERATING_SYSTEM.equals("Mac OS X")){
+				myLogger.warning("This is an untested platform. Proceed with caution");
+				System.err.println(OPERATING_SYSTEM + " is an untested platform");
+			}
+
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
