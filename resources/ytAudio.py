@@ -28,8 +28,6 @@ import youtube_meta_data
 import time
 import sys
 import subprocess
-from ytAudioSettings import ytAudioSettings
-from pySuiteInit import pySuiteInit
 
 
 #global variables for ytAudio module
@@ -42,16 +40,16 @@ ytMetaData = None
 downloaded_filename = ""
 
 #options
-file_type = ""
-itunes_filepath = ""
-temp_filepath = ""
+file_type = ".mp3"
+itunes_filepath = "/Volumes/Macintosh HD/Media/iTunes Library/Automatically Add to iTunes.localized"
+temp_filepath = "/tmp/ytAudio_temp"
 #options to add:
 #file_tyle, currently converts m4a to mp3, but m4a is arguably better. Need a new tagging system, TagID or similar
 
 """
 general ytAudio workflow:
 
--ytAudio_main
+-ytAudio_main (requires command line arguments)
 -MakeTempLocation
 -get_yt_url
 -getAudio
@@ -61,14 +59,17 @@ general ytAudio workflow:
 """
 
 #---- Main check
-def ytAudio_main(song_data):
+def ytAudio_main():
     global song_meta
+    global file_type
+    global itunes_filepath
+    global temp_filepath
     global yt_id
     
     """
     Loads the settings from the project_settings.ini file 
     """
-    load_settings()
+#     load_settings()
     """
     re-orient program to temporary location and delete contents of temp folder
     """
@@ -77,7 +78,15 @@ def ytAudio_main(song_data):
     """
     gets user input
     """
-    song_meta = song_data.split(",")
+    #sys.argv -> ["script name", "song", "artist", "options", 
+    #    file_type, itunes_location, tmp_location]
+    indexes = [0,1,2]
+    song_meta = [sys.argv[i+1] for i in indexes]
+    file_type = sys.argv[4]
+    itunes_filepath = sys.argv[5]
+    temp_filepath = sys.argv[6]
+        
+    #song_meta = ["song", "artist","options"]
     
     """
     if file is already downloaded, don't download and remove temp tree
@@ -87,6 +96,7 @@ def ytAudio_main(song_data):
     if check_existence(file_artist, file_title):
         shutil.rmtree(temp_filepath)
         raise SystemExit(1)
+    sys.exit()
     
     """
     gets youtube url from user input
@@ -116,34 +126,8 @@ def ytAudio_main(song_data):
     
     print "\nTotal process finished in "+diff_time(before)+"s"
     return
-"""
-loads settings from project_settings.ini file
-"""
-def load_settings():
-    global file_type
-    global itunes_filepath
-    global temp_filepath
-    settings = ytAudioSettings()
-    settingValues = settings.get_allItems()
     
-    if settingValues["initSettings"]["firsttime"] == "1":
-        newInitObject = pySuiteInit()
-        settings.set_item('ytAudioSettings',"itunes_path",newInitObject.ItunesFilePath)
-        settings.set_item('initSettings',"firsttime", "0")
-        if not newInitObject.successItunesFilePath or not newInitObject.successInstall:
-            print "ERROR: INSTALLATION AND SETUP UNSUCCESSFUL"
-            sys.exit()
-        settings.write_out()
-        print "Installation Successful"
-        
-    file_type = settingValues["ytAudioSettings"]["file_type"] 
-    itunes_filepath = settingValues["ytAudioSettings"]["itunes_path"]
-    temp_filepath = settingValues["ytAudioSettings"]["temp_path"]  
-    return
-    
-def firstTimeInit():
-    pass
-    
+
 def makeTempLocation():
     #location and create temp folder
     if not os.path.exists(temp_filepath):
@@ -372,6 +356,5 @@ if __name__ == "__main__":
     #prompts user for song name
     #song_meta[0] = artist
     #song_meta[1] = title
-    song_data = raw_input("Enter artist [misc], title [misc], (ytid = id):\n")
-    ytAudio_main(song_data)
+    ytAudio_main()
     

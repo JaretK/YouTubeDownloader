@@ -9,7 +9,6 @@ import java.util.logging.Logger;
 class StreamGobbler extends Thread
 	{
 		InputStream is;
-		StreamType type;
 		boolean shouldRun;
 		Queue<String> buffer;
 		Logger logger;

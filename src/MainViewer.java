@@ -5,8 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -14,19 +12,10 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
-import com.sun.glass.ui.Robot;
-import com.sun.javafx.robot.FXRobot;
-import com.sun.javafx.robot.FXRobotFactory;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -36,13 +25,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -77,16 +63,20 @@ public class MainViewer extends Application {
 	private TextArea textArea;
 
 	/*
-	 * synchronized queues for handling StreamGobblers
-	 */
-	private Queue<String> errQueue, outQueue;
-
-	/*
 	 * logging object and associated DateFormat
 	 */
 	private Logger myLogger;
+	private String LOGGER_FILE = "/tmp/YTDL_Logger.log";
 	private static final DateFormat lOG_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss.SSS");
-
+	
+	/*
+	 * associated python script variables
+	 */
+	private String PYTHON_SCRIPT = "Resources/ytAudio.py";
+	//USE PYTHON SUBPROCESS TO REDIRECT PRINT STATEMENTS?
+	@SuppressWarnings("serial")
+	private List<String> PY_COMMANDS;
+	
 	public static void main(String[] args) {
 		launch(args);
 	}
@@ -99,6 +89,7 @@ public class MainViewer extends Application {
 		//make logger and filehandler (to tmp directory 'cause its just to diagnose errors for myself)
 		myLogger = Logger.getLogger(this.getClass().getName());
 		initLogger();
+		
 		/*
 		 * make boarderpane root
 		 */
@@ -246,18 +237,17 @@ public class MainViewer extends Application {
 					cleanUpHBOX(buttonsHBOX);
 					grid.add(buttonsHBOX,0,5,2,1);
 				}
-				//USE PYTHON SUBPROCESS TO REDIRECT PRINT STATEMENTS?
-				@SuppressWarnings("serial")
-				List<String> pyCommands = new ArrayList<String>(){{
-					add("python");
-					add("-u");
-					add("Resources/ytdl_test.py");
-					add(songField);
-					add(artistField);
-					add(optionsField);
-				}};
+				else{
+					textArea.clear();
+				}
+
+				makeCommandList(
+						songField, artistField, optionsField,
+						".mp3",
+						"/Volumes/Macintosh HD/Media/iTunes Library/Automatically Add to iTunes.localized",
+						"/tmp/ytAudio_temp");
 				try {
-					handToPython(pyCommands);
+					handToPython(PY_COMMANDS);
 				} catch (IOException | InterruptedException e) {
 					myLogger.severe(e.getMessage());
 				}
@@ -303,7 +293,6 @@ public class MainViewer extends Application {
 	}
 
 	private void handToPython(List<String> command) throws IOException, InterruptedException{
-
 		if(command.size() == 0){
 			myLogger.log(Level.SEVERE, "Hand off to python failed. Command(s) missing (length = "+command.size()+")");
 			System.err.println("Argument missing in call. Args length: "+command.size());
@@ -332,7 +321,7 @@ public class MainViewer extends Application {
 					public void run() {
 						if(!outGob.isEmpty())
 							textArea.appendText(outGob.dump());
-						textArea.appendText("Python run exited with error code "+exitVal);
+						textArea.appendText("Python run exited with error code "+exitVal+"\n");
 					}
 				});
 				outGob.terminate();
@@ -344,6 +333,22 @@ public class MainViewer extends Application {
 		newThread.start();
 
 	}
+	/**
+	 * Order must be "song", "artist", "options", "file_type", "itunes location", "tmp location"
+	 * @param commands
+	 */
+	@SuppressWarnings("serial")
+	private void makeCommandList(String... commands){
+		ArrayList<String> listCommand = new ArrayList<String>(){{
+			add("python");
+			add("-u");
+			add(PYTHON_SCRIPT);
+		}};
+		for (int i = 0; i < commands.length; i++)
+			listCommand.add(commands[i]);
+		PY_COMMANDS = listCommand;
+	}
+	
 	/**
 	 * Clears all TextFields inputted into the method
 	 * @param fields: TextFields to be cleared
@@ -378,14 +383,10 @@ public class MainViewer extends Application {
 		}
 	}
 
-	private void appendLine(String toAppend){
-		textArea.appendText(toAppend+"\n");
-	}
-
 	private void initLogger(){
 		Handler loggerHandler;
 		try {
-			loggerHandler = new FileHandler("/tmp/YTDL_Logger.log");
+			loggerHandler = new FileHandler(LOGGER_FILE);
 			loggerHandler.setFormatter(new Formatter(){
 				@Override
 				public String format(LogRecord record) {
