@@ -2,31 +2,26 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-
-import javafx.scene.control.TextArea;
 
 class StreamGobbler extends Thread
 	{
 		InputStream is;
 		StreamType type;
 		boolean shouldRun;
-		Queue<String> buffer;
+		volatile Queue<String> buffer;
 		Logger logger;
-		TextArea toPush;
 		String identifier;
 
-		StreamGobbler(InputStream is, StreamType type, Logger logger, TextArea toPush)
+		StreamGobbler(InputStream is, StreamType type, Logger logger, Queue<String> synchronizedQueue)
 		{
 			this.is = is;
 			this.type = type;
 			this.shouldRun = true;
-			this.buffer = new LinkedList<String>();
+			//for multithreading
+			this.buffer = synchronizedQueue;
 			this.logger = logger;
-			this.toPush = toPush;
 			if (type == StreamType.ERR) this.identifier = "ERR";
 			else this.identifier = "OUT";
 		}
@@ -35,7 +30,7 @@ class StreamGobbler extends Thread
 			return identifier;
 		}
 
-		public String toString(){
+		public synchronized String check(){
 			return buffer.peek();
 		}
 
@@ -44,8 +39,12 @@ class StreamGobbler extends Thread
 			logger.info("<StreamGobbler Alert> Terminated @StreamGobbler (is="+is.toString()+")");
 		}
 		
-		public String dump(){
-			return buffer.poll();
+		public synchronized String dump(){
+			StringBuilder finalString = new StringBuilder();
+			while (!buffer.isEmpty())
+				finalString.append(buffer.poll()).append("\n");
+			finalString.append("\n");
+			return finalString.toString();
 		}
 		
 		public boolean isEmpty(){
@@ -61,8 +60,7 @@ class StreamGobbler extends Thread
 					BufferedReader br = new BufferedReader(isr);
 					String line=null;
 					while ( (line = br.readLine()) != null){
-						System.out.println(line);
-						buffer.add(line);
+						synchronizedAdd(line);
 					}
 				} catch (IOException ioe)
 				{
@@ -70,5 +68,9 @@ class StreamGobbler extends Thread
 				}
 			}
 
+		}
+		
+		private synchronized void synchronizedAdd(String toAdd){
+			buffer.add(toAdd);
 		}
 	}

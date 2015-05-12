@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Queue;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -12,9 +13,18 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+import com.sun.glass.ui.Robot;
+import com.sun.javafx.robot.FXRobot;
+import com.sun.javafx.robot.FXRobotFactory;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -27,6 +37,10 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -59,6 +73,11 @@ public class MainViewer extends Application {
 	 */
 	private String songField, artistField, optionsField;
 	private TextArea textArea;
+	
+	/*
+	 * synchronized queues for handling StreamGobblers
+	 */
+	private volatile Queue<String> errQueue, outQueue;
 
 	/*
 	 * logging object and associated DateFormat
@@ -139,9 +158,6 @@ public class MainViewer extends Application {
 		TextField optionsTextField = new TextField();
 		grid.add(optionsTextField, 1, 3);
 
-		//displays the gridLines for debugging
-		grid.setGridLinesVisible(DEBUG);
-
 		/*
 		 * Make the exit and run buttons
 		 */
@@ -203,6 +219,7 @@ public class MainViewer extends Application {
 					textArea.setWrapText(false);
 					//width,height
 					textArea.setPrefSize(400, 400);
+					//add changelistener
 
 
 					grid.getChildren().remove(buttonsHBOX);
@@ -236,6 +253,17 @@ public class MainViewer extends Application {
 			}
 
 		});
+		/*
+		 * If ENTER is presed, clicks the runBTN to activate python
+		 */
+		grid.setOnKeyPressed(new EventHandler<KeyEvent>(){
+
+			@Override
+			public void handle(KeyEvent event) {
+				runBTN.fire();
+			}
+
+		});
 
 		/*
 		 * Scene constructor details:
@@ -250,6 +278,16 @@ public class MainViewer extends Application {
 		primaryStage.setScene(scene);
 
 		primaryStage.show();
+
+
+		//displays the gridLines for debugging
+		//adds value to 
+		if(DEBUG){
+			grid.setGridLinesVisible(true);
+			songNameTextField.appendText("Test Song Name");
+			artistNameTextField.appendText("Test Artist Name");
+			optionsTextField.appendText("Option 1 = test 1, Option 2 = test 2");
+		}
 	}
 
 	private void handToPython(TextArea dataField, String... arguments) throws IOException, InterruptedException{
@@ -258,9 +296,8 @@ public class MainViewer extends Application {
 			myLogger.log(Level.SEVERE, "Hand off to python failed. Argument missing (length = "+arguments.length+")");
 			System.err.println("Argument missing in call. Args length: "+arguments.length);
 		}
-		ProcessBuilder procB = new ProcessBuilder("python", "Resources/ytdl_test.py", arguments[0], arguments[1], arguments[2]);
-		Process proc = procB.start();
-		
+
+
 		//RUN PROCESS AND CONCURRENTLY SEND TO TEXTAREA... It shouldn't be this difficult
 
 	}
@@ -297,7 +334,7 @@ public class MainViewer extends Application {
 			buttonEle.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 		}
 	}
-	
+
 	private void appendLine(TextArea tArea, String toAppend){
 		tArea.appendText(toAppend+"\n");
 	}
