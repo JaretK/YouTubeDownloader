@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
 
 class StreamGobbler extends Thread
@@ -10,45 +11,45 @@ class StreamGobbler extends Thread
 		InputStream is;
 		StreamType type;
 		boolean shouldRun;
-		volatile Queue<String> buffer;
+		Queue<String> buffer;
 		Logger logger;
-		String identifier;
-
-		StreamGobbler(InputStream is, StreamType type, Logger logger, Queue<String> synchronizedQueue)
+		
+		StreamGobbler(InputStream is, Logger logger)
 		{
 			this.is = is;
-			this.type = type;
 			this.shouldRun = true;
 			//for multithreading
-			this.buffer = synchronizedQueue;
+			this.buffer = new ConcurrentLinkedQueue<String>();
 			this.logger = logger;
-			if (type == StreamType.ERR) this.identifier = "ERR";
-			else this.identifier = "OUT";
-		}
-		
-		public String getIdentifier(){
-			return identifier;
 		}
 
-		public synchronized String check(){
-			return buffer.peek();
+		public String toString(){
+			return buffer.toString();
 		}
 
 		public void terminate(){
 			this.shouldRun = false;
+			System.out.println();
 			logger.info("<StreamGobbler Alert> Terminated @StreamGobbler (is="+is.toString()+")");
 		}
 		
-		public synchronized String dump(){
+		public String dump(){
 			StringBuilder finalString = new StringBuilder();
 			while (!buffer.isEmpty())
 				finalString.append(buffer.poll()).append("\n");
-			finalString.append("\n");
 			return finalString.toString();
+		}
+		
+		public String peek(){
+			return buffer.peek();
 		}
 		
 		public boolean isEmpty(){
 			return buffer.isEmpty();
+		}
+		
+		public int size(){
+			return buffer.size();
 		}
 
 		public void run()
@@ -60,7 +61,7 @@ class StreamGobbler extends Thread
 					BufferedReader br = new BufferedReader(isr);
 					String line=null;
 					while ( (line = br.readLine()) != null){
-						synchronizedAdd(line);
+						buffer.add(line);
 					}
 				} catch (IOException ioe)
 				{
@@ -69,8 +70,5 @@ class StreamGobbler extends Thread
 			}
 
 		}
-		
-		private synchronized void synchronizedAdd(String toAdd){
-			buffer.add(toAdd);
-		}
+
 	}

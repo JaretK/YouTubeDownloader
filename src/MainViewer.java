@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -23,6 +24,7 @@ import com.sun.javafx.robot.FXRobotFactory;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -73,11 +75,11 @@ public class MainViewer extends Application {
 	 */
 	private String songField, artistField, optionsField;
 	private TextArea textArea;
-	
+
 	/*
 	 * synchronized queues for handling StreamGobblers
 	 */
-	private volatile Queue<String> errQueue, outQueue;
+	private Queue<String> errQueue, outQueue;
 
 	/*
 	 * logging object and associated DateFormat
@@ -245,8 +247,17 @@ public class MainViewer extends Application {
 					grid.add(buttonsHBOX,0,5,2,1);
 				}
 				//USE PYTHON SUBPROCESS TO REDIRECT PRINT STATEMENTS?
+				@SuppressWarnings("serial")
+				List<String> pyCommands = new ArrayList<String>(){{
+					add("python");
+					add("-u");
+					add("Resources/ytdl_test.py");
+					add(songField);
+					add(artistField);
+					add(optionsField);
+				}};
 				try {
-					handToPython(textArea, songField, artistField, optionsField);
+					handToPython(pyCommands);
 				} catch (IOException | InterruptedException e) {
 					myLogger.severe(e.getMessage());
 				}
@@ -254,13 +265,14 @@ public class MainViewer extends Application {
 
 		});
 		/*
-		 * If ENTER is presed, clicks the runBTN to activate python
+		 * If ENTER is pressed, clicks the runBTN to activate python
 		 */
 		grid.setOnKeyPressed(new EventHandler<KeyEvent>(){
 
 			@Override
 			public void handle(KeyEvent event) {
-				runBTN.fire();
+				if(event.getCode() == KeyCode.ENTER)
+					runBTN.fire();
 			}
 
 		});
@@ -290,15 +302,46 @@ public class MainViewer extends Application {
 		}
 	}
 
-	private void handToPython(TextArea dataField, String... arguments) throws IOException, InterruptedException{
+	private void handToPython(List<String> command) throws IOException, InterruptedException{
 
-		if(arguments.length != 3){
-			myLogger.log(Level.SEVERE, "Hand off to python failed. Argument missing (length = "+arguments.length+")");
-			System.err.println("Argument missing in call. Args length: "+arguments.length);
+		if(command.size() == 0){
+			myLogger.log(Level.SEVERE, "Hand off to python failed. Command(s) missing (length = "+command.size()+")");
+			System.err.println("Argument missing in call. Args length: "+command.size());
 		}
+		//disgusting, but it gets the job done
+		Task<Void> pyTask = new Task<Void>(){
+			@Override
+			protected Void call() throws Exception {
+				ProcessBuilder pb = new ProcessBuilder();
+				pb.command(command);
+				Process proc = pb.start();
+				StreamGobbler outGob = new StreamGobbler(proc.getInputStream(),myLogger);
+				outGob.start();
+				while(proc.isAlive())
+					if(!outGob.isEmpty()){
+						Platform.runLater(new Runnable(){
+							@Override
+							public void run() {
+								textArea.appendText(outGob.dump());
+							}
+						});
+					}
+				int exitVal = proc.waitFor();
+				Platform.runLater(new Runnable(){
+					@Override
+					public void run() {
+						if(!outGob.isEmpty())
+							textArea.appendText(outGob.dump());
+						textArea.appendText("Python run exited with error code "+exitVal);
+					}
+				});
+				outGob.terminate();
+				return null;
+			}
 
-
-		//RUN PROCESS AND CONCURRENTLY SEND TO TEXTAREA... It shouldn't be this difficult
+		};
+		Thread newThread = new Thread(pyTask);
+		newThread.start();
 
 	}
 	/**
@@ -335,8 +378,8 @@ public class MainViewer extends Application {
 		}
 	}
 
-	private void appendLine(TextArea tArea, String toAppend){
-		tArea.appendText(toAppend+"\n");
+	private void appendLine(String toAppend){
+		textArea.appendText(toAppend+"\n");
 	}
 
 	private void initLogger(){
