@@ -113,7 +113,7 @@ public class MainViewer extends Application {
 	/*
 	 * associated python script variables
 	 */
-	private String PYTHON_SCRIPT = "Resources/ytAudio.py";
+	private String PYTHON_SCRIPT = "Resources/ytAudio.zip";
 	private List<String> PY_COMMANDS;
 	private String FILE_TYPE = ".mp3";
 	private String ITUNES_FILEPATH = "/Volumes/Macintosh HD/Media/iTunes Library/Automatically Add to iTunes.localized";
