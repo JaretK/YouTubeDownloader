@@ -26,3 +26,7 @@ Python back end:
 
 </ul>
 </ul>
+
+# LICENSES
+
+This program is offered under the GNU General Purpose License (GPL). For a full copy of the license, see License/COPYING.txt or <code><http://www.gnu.org/licenses/></code>. To comply with the license for pafy (GNU LGPL), the project will be hosted on github and offers the user the ability to download files, commit to those files, and compile the project themselves. Therefore, any additional copies of pafy or other dependencies can be altered on the git clone and self-compiled. 

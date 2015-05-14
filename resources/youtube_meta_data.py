@@ -52,10 +52,10 @@ class youtube_meta_data:
         author = "AUTHOR: "+self.author+carrRet
         published = "PUBLISHED: "+self.published+carrRet
         ytid = "YOUTUBE ID: "+self.ytid+carrRet
-        filesize = "FILE SIZE: "+str(self.bestAudioSize) +" MB"+ carrRet
+        filesize = "FILE SIZE: "+str(self.bestAudioSize) +" Bytes"+ carrRet
         bitrate = "BITRATE: "+str(self.bitrate)+carrRet
         footer = "*"*20+carrRet
-        return header+title+duration+author+published+ytid+filesize+bitrate+footer
+        return unicode(header+title+duration+author+published+ytid+filesize+bitrate+footer).encode("utf-8")
         
     def convertDuration(self, duration_in):
         """
@@ -117,16 +117,15 @@ def change_printing_option(total, recvd, ratio, rate, eta):
     
     eta = int(eta)
     percent = int("{0:.0f}".format(ratio*100))
+
+    oldETA = eta
+    oldPercent = percent
+    design = "[Pafy Download]"
+    ratioFormat = "[{0:.1f}%]".format(ratio*100)
+    rateFormat = "[{0:.0f} kbps]".format(rate)
+    etaFormat = "[{0:.0f} s]".format(eta)
+    print design+ " %: " + ratioFormat + " rate: " + rateFormat + " ETA: "+etaFormat
     
-    if (eta < oldETA or percent > oldPercent+10):
-        oldETA = eta
-        oldPercent = percent
-        design = "[Pafy Download]"
-        ratioFormat = "[{0:.1f}%]".format(ratio*100)
-        rateFormat = "[{0:.0f} kbps]".format(rate)
-        etaFormat = "[{0:.0f} s]".format(eta)
-        print design+ " %: " + ratioFormat + " rate: " + rateFormat + " ETA: "+etaFormat
-        
 if __name__ == "__main__":
     #test URL
     url_in = "https://www.youtube.com/watch?v=hJtNvBtL9rg"

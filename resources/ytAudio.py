@@ -4,6 +4,22 @@
 Created on Jan 2, 2015
 
 @author: jkarnuta
+
+LICENSE: GNU GPL. See Licenses/COPYING for more
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 '''
 #required custom imports:
 #mutagen
@@ -28,7 +44,6 @@ import youtube_meta_data
 import time
 import sys
 import subprocess
-
 
 #global variables for ytAudio module
 number_videos=0
@@ -65,7 +80,6 @@ def ytAudio_main():
     global itunes_filepath
     global temp_filepath
     global yt_id
-    
     """
     Loads the settings from the project_settings.ini file 
     """
@@ -96,7 +110,6 @@ def ytAudio_main():
     if check_existence(file_artist, file_title):
         shutil.rmtree(temp_filepath)
         raise SystemExit(1)
-    sys.exit()
     
     """
     gets youtube url from user input
@@ -111,6 +124,7 @@ def ytAudio_main():
     assigns yt_id to ytMetaData.ytid
     """
     yt_id = ytMetaData.ytid
+
     """
     downloads audio, assigns downloaded_filename
     """
@@ -118,12 +132,13 @@ def ytAudio_main():
     """
     converts file, moves to itunes
     """
+    print "ALTERING"
     alter_file()
     """
     deletes the temp_filepath from file system
     """
     shutil.rmtree(temp_filepath)
-    
+    print "FINISHED"
     print "\nTotal process finished in "+diff_time(before)+"s"
     return
     
@@ -160,7 +175,7 @@ def get_yt_URL():
     song_meta[0] = re.sub("\[.*?\]","",song_meta[0])
     song_meta[1] = re.sub("\[.*?\]","",song_meta[1])
     
-    if len(song_meta) == 3:
+    if song_meta[2] != "":
         if "ytid" in song_meta[2]:
             id_list = [x.strip() for x in song_meta[2].split("=")]
             yt_id = id_list[1]
@@ -170,7 +185,7 @@ def get_yt_URL():
             print "ytid not in third argument..."
             print "Exiting ytAudio"
             sys.exit(1)
-
+            
     #---------------- System Exiting Block
     if not song_info:
         print("no song entered, exiting")
@@ -235,8 +250,8 @@ def alter_file():
     current_directory = os.getcwd()
     
     m4a_file = downloaded_filename
-    audio_file_artist = make_cap(song_meta[0])
-    audio_file_title = make_cap(song_meta[1])
+    audio_file_artist = make_cap(song_meta[1])
+    audio_file_title = make_cap(song_meta[0])
     begin_time = getTime()
     
 #     if file_type == ".mp3": #FILE_TYPE not functional yet
@@ -339,18 +354,16 @@ def check_existence(file_artist, file_title):
     
     inITunes = os.path.isfile(newFilePath)
     if inITunes:
-        print "\nERROR: "+file_title+" by: "+file_artist+ " already exists in iTunes"
+        print >> sys.stderr, "ERROR: "+file_title+" by: "+file_artist+ " already exists in iTunes"
         return True
     
     tempFiles = os.listdir(itunes_filepath)
     for item in tempFiles:
         if file_title in item:
-            print "\nERROR: "+file_title+" by: "+file_artist+ " already exists in: "+itunes_filepath
+            print >> sys.stderr, "ERROR: "+file_title+" by: "+file_artist+ " already exists in: "+itunes_filepath
             return True
     
     return inITunes
-
-    
 
 if __name__ == "__main__":
     #prompts user for song name
