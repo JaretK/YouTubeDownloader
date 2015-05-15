@@ -180,7 +180,7 @@ public class MainViewer extends Application {
 		restart.setOnAction(new EventHandler<ActionEvent>(){
 			@Override
 			public void handle(ActionEvent event) {
-				myLogger.info("Restart");
+				myLogger.info("Restarting " + this.getClass().getName() + " from YouTubeDownloader");
 				ForceRestart();
 			}
 		});
@@ -455,8 +455,10 @@ public class MainViewer extends Application {
 								@Override
 								public void run() {
 									textArea.getStyleClass().add("MainTextArea");
+									addErrorText(grid, "An Error Occured", 0,4);
 									textArea.appendText(errGob.dump());
 									textArea.appendText("Error! Terminating Run.\n");
+									
 								}
 							});
 							pulseToTerminate = true;
@@ -505,9 +507,29 @@ public class MainViewer extends Application {
 		}
 		return null;
 	}
-
-	private void addText(GridPane grid, String Text, int col, int row){
-		Node toReplace = getNodeAtIndex(grid, 0, 4);
+	
+	/**
+	 * Adds text to grid at specified (col, row) and styles it in accordance to .ErrorText in mainViewer.css
+	 * @param grid = GridPane to add text to
+	 * @param Text = String to insert
+	 * @param col = col
+	 * @param row = row
+	 */
+	private void addErrorText(GridPane grid, String Text, int col, int row){
+		Label errorText = addText(grid, Text, col, row);
+		errorText.getStyleClass().add("ErrorText");
+	}
+	
+	/**
+	 * Adds text to grid at specified (col, row)
+	 * @param grid = GridPane to add text to
+	 * @param Text = String to insert
+	 * @param col = column to insert
+	 * @param row = row to insert
+	 * @return Label that contains the text that was inserted (in case it needs to be modified)
+	 */
+	private Label addText(GridPane grid, String Text, int col, int row){
+		Node toReplace = getNodeAtIndex(grid, col, row); //finds Node at current location and replaces it
 		grid.getChildren().remove(toReplace);
 		Label newLabel = new Label(Text);
 		newLabel.setWrapText(true);
@@ -516,6 +538,8 @@ public class MainViewer extends Application {
 		HBOXtoAdd.getChildren().add(newLabel);
 
 		grid.add(HBOXtoAdd, col, row, 2, 1);
+		
+		return newLabel;
 	}
 
 	private void addCompleteText(GridPane grid){

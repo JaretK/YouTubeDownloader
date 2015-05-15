@@ -69,7 +69,7 @@ class ParseStreamGobbler extends Thread
 
 	public void terminate(){
 		this.shouldRun = false;
-		logger.info("<StreamGobbler Alert> Terminated @StreamGobbler (is="+is.toString()+")");
+		logger.info("<StreamGobbler Alert> Terminated @StreamGobbler (Stream "+type+" = "+is.toString()+")");
 	}
 
 	public String dump(){
