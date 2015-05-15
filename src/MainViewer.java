@@ -495,6 +495,7 @@ public class MainViewer extends Application {
 
 	}
 
+	@SuppressWarnings("static-access")
 	private Node getNodeAtIndex(GridPane grid, int col, int row){
 		ObservableList<Node> obsList= grid.getChildren();
 		for(Node nd : obsList){
