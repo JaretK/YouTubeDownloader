@@ -17,6 +17,7 @@
  */
 
 
+import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -29,7 +30,10 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.prefs.Preferences;
 
+import javafx.animation.Animation;
+import javafx.animation.Transition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -58,6 +62,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 /**
  * WARNING: This code is exceptionally ugly. I don't expect anyone to be able to read it at this point
  * , even though I tried to name variables well and have my logic be easy to follow. There are a lot of 
@@ -67,7 +72,7 @@ import javafx.stage.Stage;
  * @author jkarnuta
  *
  */
-public class MainViewer extends Application {
+public class MainApp extends Application {
 
 	/*
 	 * controls debug operations throughout the program:
@@ -96,12 +101,17 @@ public class MainViewer extends Application {
 	private static final int MAX_PROGRESS = 100; 
 	private HBox addHBOX;
 	private SpinningState oldState;
+	
+	/*
+	 * Other variables (look @ names)
+	 */
 	private boolean programRunning = false;
 	private boolean isMinimized = true;
 	private Stage pStage;
 	private Task<Void> pyTask;
 	private boolean pulseToTerminate = false;
 	private static final String initialOptionsText = "e.g. ytid";
+	private boolean noPreferencesFound;
 
 	/*
 	 * logging object and associated DateFormat
@@ -337,6 +347,14 @@ public class MainViewer extends Application {
 				else{
 					textArea.clear();
 				}
+//				final Animation expand = new Transition() {
+//		            { setCycleDuration(Duration.millis(250)); }
+//		            protected void interpolate(double frac) {
+//		              final double curWidth = expandedWidth * (1.0 - frac);
+//		              setPrefWidth(curWidth);
+//		              setTranslateX(-expandedWidth + curWidth);
+//		            }
+//		          };
 
 				makeCommandList(
 						songField, artistField, optionsField,
@@ -545,6 +563,28 @@ public class MainViewer extends Application {
 	private void addCompleteText(GridPane grid){
 		addText(grid,songField + " by "+artistField
 				+" downloaded successfully",0,4);
+	}
+	
+	private void fetchPreferences(){
+		
+	}
+	
+	public File getPreferencesFilePath(){
+		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
+		String filePath = prefs.get("filePath", null);
+		return (filePath != null) ? new File(filePath) : null;
+	}
+	
+	public void setPreferencesFilePath(GridPane grid, File fileToSet){
+		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
+		if (fileToSet != null){
+			prefs.put("filePath", fileToSet.getPath());
+			addText(grid, "Successfully Updated Preferences", 0, 4);
+		}
+		else{
+			prefs.remove("filePath");
+			addErrorText(grid, "Null File Passed into Preferences", 0, 4);
+		}
 	}
 
 	private void addSpinningProgressControl(GridPane grid, String labelText){

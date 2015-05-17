@@ -1,9 +1,5 @@
-<init>
-FirstTime = true
-</init>
-
 <ytAudioSettings>
-ile_type = .mp3 #DO NOT CHANGE
+file_type = .mp3
 itunes_path = /Volumes/Macintosh HD/Media/iTunes Library/Automatically Add to iTunes.localized
 temp_path = /tmp/ytAudio_temp
 </ytAudioSettings>
