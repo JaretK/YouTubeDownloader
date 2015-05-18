@@ -32,8 +32,6 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 
-import javafx.animation.Animation;
-import javafx.animation.Transition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -62,7 +60,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 /**
  * WARNING: This code is exceptionally ugly. I don't expect anyone to be able to read it at this point
  * , even though I tried to name variables well and have my logic be easy to follow. There are a lot of 
@@ -79,17 +76,6 @@ public class MainApp extends Application {
 	 * sets grid lines to active
 	 */
 	private static final boolean DEBUG = false;
-
-	/*
-	 * Controls the H and V spacing of the grid and the spacing of the 
-	 * buttons HBox
-	 */
-	private static final double SPACING = 10;
-
-	/*
-	 * Gets the current OS
-	 */
-	private static final String OPERATING_SYSTEM = System.getProperty("os.name");
 
 	/*
 	 * instance variables for the text field contents and textArea and progressBar
@@ -111,7 +97,6 @@ public class MainApp extends Application {
 	private Task<Void> pyTask;
 	private boolean pulseToTerminate = false;
 	private static final String initialOptionsText = "e.g. ytid";
-	private boolean noPreferencesFound;
 
 	/*
 	 * logging object and associated DateFormat
@@ -159,8 +144,8 @@ public class MainApp extends Application {
 		GridPane grid = new GridPane();
 		bpRoot.setCenter(grid);
 		grid.setAlignment(Pos.TOP_CENTER);
-		grid.setHgap(SPACING);//H width between cols
-		grid.setVgap(SPACING);//V height between rows
+		grid.setHgap(Constants.SPACING);//H width between cols
+		grid.setVgap(Constants.SPACING);//V height between rows
 
 		/*
 		 * adds padding inset
@@ -230,7 +215,7 @@ public class MainApp extends Application {
 		/*
 		 * Make the exit and run buttons
 		 */
-		HBox buttonsHBOX = new HBox(SPACING);
+		HBox buttonsHBOX = new HBox(Constants.SPACING);
 		Button quitBTN = new Button("Exit");
 		runBTN = new Button("Run");
 		buttonsHBOX.setAlignment(Pos.BOTTOM_CENTER);
@@ -551,7 +536,7 @@ public class MainApp extends Application {
 		grid.getChildren().remove(toReplace);
 		Label newLabel = new Label(Text);
 		newLabel.setWrapText(true);
-		HBox HBOXtoAdd = new HBox(SPACING);
+		HBox HBOXtoAdd = new HBox(Constants.SPACING);
 		HBOXtoAdd.setAlignment(Pos.CENTER);
 		HBOXtoAdd.getChildren().add(newLabel);
 
@@ -564,11 +549,7 @@ public class MainApp extends Application {
 		addText(grid,songField + " by "+artistField
 				+" downloaded successfully",0,4);
 	}
-	
-	private void fetchPreferences(){
-		
-	}
-	
+
 	public File getPreferencesFilePath(){
 		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
 		String filePath = prefs.get("filePath", null);
@@ -588,7 +569,7 @@ public class MainApp extends Application {
 	}
 
 	private void addSpinningProgressControl(GridPane grid, String labelText){
-		addHBOX = new HBox(SPACING);
+		addHBOX = new HBox(Constants.SPACING);
 		Label downloadingState = new Label(labelText);
 		ProgressIndicator progressIndicator = new ProgressIndicator();
 		addHBOX.getChildren().addAll(downloadingState, progressIndicator);
@@ -688,10 +669,10 @@ public class MainApp extends Application {
 			loggerHandler.setLevel(Level.ALL);
 			myLogger.addHandler(loggerHandler);
 			myLogger.info("YouTubeDownloader Logging File Initialized");
-			myLogger.info("Running on "+OPERATING_SYSTEM);
-			if(!OPERATING_SYSTEM.equals("Mac OS X")){
+			myLogger.info("Running on "+Constants.OPERATING_SYSTEM);
+			if(!Constants.OPERATING_SYSTEM.equals("Mac OS X")){
 				myLogger.warning("This is an untested platform. Proceed with caution");
-				System.err.println(OPERATING_SYSTEM + " is an untested platform");
+				System.err.println(Constants.OPERATING_SYSTEM + " is an untested platform");
 			}
 
 		} catch (SecurityException e) {
