@@ -11,5 +11,7 @@ public class Constants {
 	 * Gets the current OS
 	 */
 	public static final String OPERATING_SYSTEM = System.getProperty("os.name");
-
+	
+	public static final String userHome = System.getProperty("user.home");
+	public static final String tempFilePath = System.getProperty("java.io.tmpdir");
 }

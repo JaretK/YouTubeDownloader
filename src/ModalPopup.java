@@ -1,121 +1,156 @@
 import java.io.File;
 
+import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+public class ModalPopup extends Application{
 
-public class ModalPopup {
+	private static final String guessiTunesPath = Constants.userHome+File.separator+"Music"+File.separator+"iTunes";
+	private OptionsFromWindow options;
+	private final String defaultITunesPath;
+	private final String defaultTempPath;
 	
-	Stage stage;
-	GridPane grid;
-	OptionsFromWindow options;
+	public ModalPopup(String defaultITunesPath, String defaultTempPath){
+		this.defaultITunesPath = defaultITunesPath;
+		this.defaultTempPath = defaultTempPath;
+	}
 	
-	public ModalPopup(Stage stage){
-		this.stage = stage;
-		stage.initModality(Modality.APPLICATION_MODAL);
-		grid = new GridPane();
-		
+	public void start(Stage primaryStage) {
+
+		GridPane grid = new GridPane();
+		grid.setAlignment(Pos.TOP_CENTER);
+		grid.setHgap(Constants.SPACING);//H width between cols
+		grid.setVgap(Constants.SPACING);//V height between rows
+		grid.setPadding(new Insets(25,25,25,25));
+
 		//Make Labels and TextFields
 		Label fileTypeLabel = new Label("File Type");
-		TextField fileType = new TextField();
-		HBox fileTypeHBOX = makeHBox(fileTypeLabel, fileType);
-		
+		TextField fileType = new TextField(".mp3");
+		fileType.setDisable(true);
+
 		Label iTunesPathLabel = new Label("\"Automatically Add to iTunes\" path");
-		TextField iTunesPath = new TextField();
-		HBox iTunesHBOX = makeHBoxWithChooser(iTunesPathLabel, iTunesPath);
-		
+		iTunesPathLabel.setWrapText(true);
+		TextField iTunesPath = new TextField(defaultITunesPath);
+		HBox iTunesHBOX = makeHBoxWithChooser(iTunesPath, "iTunes Automatically Add to iTunes Folder", primaryStage, ChooserType.iTunesPath);
+
 		Label tempPathLabel = new Label("Temp File Path ");
-		TextField tempPathField = new TextField();
-		HBox tempHBOX = makeHBoxWithChooser(tempPathLabel, tempPathField);
-		grid.add(fileTypeHBOX , 0, 0);
-		grid.add(iTunesHBOX, 0, 1);
-		grid.add(tempHBOX, 0, 2);
-		
+		TextField tempPathField = new TextField(defaultTempPath);
+		HBox tempHBOX = makeHBoxWithChooser(tempPathField, "Temp folder location (try /tmp)", primaryStage, ChooserType.tempPath);
+		grid.add(fileTypeLabel, 0,0);
+		grid.add(fileType, 1,0 );
+		grid.add(iTunesPathLabel, 0,1);
+		grid.add(iTunesHBOX, 1,1);
+		grid.add(tempPathLabel, 0, 2);
+		grid.add(tempHBOX, 1,2);
+
 		//buttons
-		Button quitBTN = new Button("Quit");
-		quitBTN.setOnAction(new EventHandler<ActionEvent>(){
+		Button closeBTN = new Button("Close");
+		closeBTN.setOnAction(new EventHandler<ActionEvent>(){
 			@Override
 			public void handle(ActionEvent event) {
-				stage.close();
+				primaryStage.close();
 			}
 		});
-		
+
 		Button clearBTN = new Button("Clear");
 		clearBTN.setOnAction(new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
-				clearFields(fileType, iTunesPath, tempPathField);
+				clearFields(iTunesPath, tempPathField);
 			}
 		});
-		
-		Button okBTN = new Button("Ok");
-		okBTN.setOnAction(new EventHandler<ActionEvent>(){
+
+		Button saveBTN = new Button("Save");
+		saveBTN.setOnAction(new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
 				String filetype = fileType.getText();
 				String iTunes = iTunesPath.getText();
 				String temp = tempPathField.getText();
-				options = new OptionsFromWindow(filetype, iTunes,temp);
+				if(iTunes != "" && temp != ""){
+					options = new OptionsFromWindow(filetype,iTunes,temp);
+				}
+				closeBTN.fire();
 			}
 		});
-		
+
 		HBox buttonBox = new HBox(Constants.SPACING);
 		buttonBox.setAlignment(Pos.CENTER);
-		buttonBox.getChildren().addAll(quitBTN, clearBTN, okBTN);
+		buttonBox.getChildren().addAll(closeBTN, clearBTN, saveBTN);
+		cleanUpHBOX(buttonBox);
+		grid.add(buttonBox, 0, 3, 2, 1);
+		grid.setOnKeyPressed(new EventHandler<KeyEvent>(){
+			public void handle(KeyEvent event) {
+				if(event.getCode() == KeyCode.ENTER)
+					saveBTN.fire();
+			}
+		});
+		Scene scene = new Scene(grid);
+		primaryStage.setScene(scene);
+		primaryStage.sizeToScene();
+		primaryStage.showAndWait();
 	}
-	
-	/**
-	 * Clears all TextFields inputted into the method
-	 * @param fields: TextFields to be cleared
-	 */
-	private void clearFields(TextField... fields){
+
+	public OptionsFromWindow getOptions(){
+
+		return options;
+	}
+
+	private static void clearFields(TextField... fields){
 		for (int i = 0; i < fields.length; i++)
 			fields[i].clear();
 	}
-	
-	private HBox makeHBox(Label label, TextField field){
-		HBox addHBOX = new HBox(Constants.SPACING);
-		addHBOX.getChildren().addAll(label, field);
-		addHBOX.setAlignment(Pos.CENTER);
-		return addHBOX;
-	}
-	
-	private HBox makeHBoxWithChooser(Label label, TextField field){
+
+	private static HBox makeHBoxWithChooser(TextField field, String title, Stage stage, ChooserType chooser){
 		Button findBTN = new Button("find");
 		HBox addHBOX = new HBox(Constants.SPACING);
-		addHBOX.getChildren().addAll(label, field, findBTN);
-		addHBOX.setAlignment(Pos.CENTER);
-		
+		addHBOX.getChildren().addAll(field, findBTN);
+		addHBOX.setAlignment(Pos.CENTER_LEFT);
+
 		findBTN.setOnAction(new EventHandler<ActionEvent>(){
 			@Override
 			public void handle(ActionEvent event) {
 				DirectoryChooser dc = new DirectoryChooser();
-				dc.setTitle("Choose the directory for "+label.getText());
+				dc.setTitle("Choose the directory for "+title);
+				String initPath = (chooser == ChooserType.iTunesPath) ? guessiTunesPath : Constants.tempFilePath ;
+				String defaultPath = (chooser == ChooserType.iTunesPath) ? Constants.userHome : "/" ;
+				try{
+					dc.setInitialDirectory(new File(initPath));
+				} catch(java.lang.IllegalArgumentException e){
+					dc.setInitialDirectory(new File(defaultPath));
+				}
 				File chosenDirectory = dc.showDialog(stage);
-				field.setText(chosenDirectory.getPath());
+				if (chosenDirectory != null)
+					field.setText(chosenDirectory.getPath());
 			}
 		});
-		
+
 		return addHBOX;
 	}
 	
-	public void show(){
-		Scene scene = new Scene(grid);
-		stage.setScene(scene);
-		stage.sizeToScene();
-		stage.show();
+	/**
+	 * Loops through the elements of the input box and changes their fields
+	 * inputBox should be sufficiently small enough that optimization is 
+	 * unnecessary
+	 * @param inputBox, HBox to clean up
+	 */
+	private void cleanUpHBOX(HBox inputBox){
+		for (Node nodeEle : inputBox.getChildren()){
+			Button buttonEle = (Button) nodeEle;
+			buttonEle.setPrefSize(100,20);
+			buttonEle.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+		}
 	}
-	
-	public static void main(String[] args){		
-		
-	}
-	
 }

@@ -17,8 +17,12 @@
  */
 
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -54,11 +58,13 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 /**
  * WARNING: This code is exceptionally ugly. I don't expect anyone to be able to read it at this point
@@ -84,10 +90,11 @@ public class MainApp extends Application {
 	private TextArea textArea;
 	private ProgressBar progressBar;
 	private Button runBTN;
+	private Menu prefMenu;
 	private static final int MAX_PROGRESS = 100; 
 	private HBox addHBOX;
 	private SpinningState oldState;
-	
+
 	/*
 	 * Other variables (look @ names)
 	 */
@@ -110,9 +117,10 @@ public class MainApp extends Application {
 	 */
 	private String PYTHON_SCRIPT = "Resources/ytAudio.zip";
 	private List<String> PY_COMMANDS;
-	private String FILE_TYPE = ".mp3";
-	private String ITUNES_FILEPATH = "/Volumes/Macintosh HD/Media/iTunes Library/Automatically Add to iTunes.localized";
-	private String TEMP_FILEPATH = "/tmp/ytAudio_temp";
+	private String FILE_TYPE;
+	private String ITUNES_FILEPATH;
+	private String TEMP_FILEPATH;
+	private OptionsFromWindow options;
 
 	public static void main(String[] args) {
 		launch(args);
@@ -142,7 +150,10 @@ public class MainApp extends Application {
 
 		//Create the GridPane layout
 		GridPane grid = new GridPane();
-		bpRoot.setCenter(grid);
+		ColumnConstraints col1 = new ColumnConstraints();
+		col1.setPercentWidth(50);
+		grid.getColumnConstraints().add(col1);
+		bpRoot.setLeft(grid);
 		grid.setAlignment(Pos.TOP_CENTER);
 		grid.setHgap(Constants.SPACING);//H width between cols
 		grid.setVgap(Constants.SPACING);//V height between rows
@@ -181,7 +192,16 @@ public class MainApp extends Application {
 		});
 		fileMenu.getItems().addAll(Exit, restart);
 
-		Menu prefMenu = new Menu("Preferences");
+		prefMenu = new Menu("Preferences");
+
+		MenuItem updatePrefs = new MenuItem("Update");
+		updatePrefs.setOnAction(new EventHandler<ActionEvent>(){
+			@Override
+			public void handle(ActionEvent event) {
+				getPreferencesWindow(grid);
+			}
+		});
+		prefMenu.getItems().addAll(updatePrefs);
 
 		menuBar.getMenus().addAll(fileMenu, prefMenu);
 		bpRoot.setTop(menuBar);
@@ -253,7 +273,7 @@ public class MainApp extends Application {
 
 					myLogger.log(Level.SEVERE, "A TextBox field parameter is missing("+errList.toString()+"). Clearing and starting over");
 					String error = "A TextBox field parameter is missing\n"+
-					"Check: "+errList;
+							"Check: "+errList;
 					clearFields(songNameTextField, artistNameTextField, optionsTextField);
 					EasyDialogs.makeAlertDialog("Alert: Invalid Arguments",error);
 					return;
@@ -263,7 +283,7 @@ public class MainApp extends Application {
 				if(gridList.contains(progressBar)) gridList.remove(progressBar);
 				if(gridList.contains(addHBOX)) gridList.remove(addHBOX);
 
-				addSpinningProgressControl(grid,"Extracting YouTube URLs and Preparing to Download");
+				addSpinningProgressControl(grid,"Extracting YouTube URLs and Preparing to Download", false);
 
 				//clear textFields
 				songNameTextField.clear();
@@ -295,7 +315,7 @@ public class MainApp extends Application {
 						public void handle(ActionEvent event) {
 							isMinimized = true;
 							buttonsHBOX.getChildren().remove(minimizeBTN);
-							
+
 							if(programRunning){
 								grid.getChildren().remove(textArea);
 								grid.getChildren().remove(buttonsHBOX);
@@ -320,11 +340,11 @@ public class MainApp extends Application {
 								grid.getChildren().remove(getNodeAtIndex(grid,0,4));
 								grid.add(buttonsHBOX,0,4,2,1);
 							}
-							
+
 							primaryStage.sizeToScene();
 						}
 					});
-				
+
 					buttonsHBOX.getChildren().add(minimizeBTN);
 					cleanUpHBOX(buttonsHBOX);
 					grid.add(buttonsHBOX,0,6,2,1);
@@ -332,15 +352,16 @@ public class MainApp extends Application {
 				else{
 					textArea.clear();
 				}
-//				final Animation expand = new Transition() {
-//		            { setCycleDuration(Duration.millis(250)); }
-//		            protected void interpolate(double frac) {
-//		              final double curWidth = expandedWidth * (1.0 - frac);
-//		              setPrefWidth(curWidth);
-//		              setTranslateX(-expandedWidth + curWidth);
-//		            }
-//		          };
+				//				final Animation expand = new Transition() {
+				//		            { setCycleDuration(Duration.millis(250)); }
+				//		            protected void interpolate(double frac) {
+				//		              final double curWidth = expandedWidth * (1.0 - frac);
+				//		              setPrefWidth(curWidth);
+				//		              setTranslateX(-expandedWidth + curWidth);
+				//		            }
+				//		          };
 
+				getPreferences();
 				makeCommandList(
 						songField, artistField, optionsField,
 						FILE_TYPE,
@@ -409,6 +430,7 @@ public class MainApp extends Application {
 				outGob.commence();
 				errGob.commence();
 				runBTN.setDisable(true);
+				prefMenu.setDisable(true);
 				while(!pulseToTerminate && (programRunning = proc.isAlive())){
 					boolean outGobEmpty = outGob.isEmpty();
 					boolean errGobEmpty = errGob.isEmpty();
@@ -430,7 +452,7 @@ public class MainApp extends Application {
 							@Override
 							public void run() {
 								grid.getChildren().remove(progressBar);
-								addSpinningProgressControl(grid, "Converting and Moving Audio File");
+								addSpinningProgressControl(grid, "Converting and Moving Audio File", true);
 							}
 						});
 					}
@@ -461,7 +483,7 @@ public class MainApp extends Application {
 									addErrorText(grid, "An Error Occured", 0,4);
 									textArea.appendText(errGob.dump());
 									textArea.appendText("Error! Terminating Run.\n");
-									
+
 								}
 							});
 							pulseToTerminate = true;
@@ -477,6 +499,7 @@ public class MainApp extends Application {
 					pulseToTerminate = false;
 					programRunning = false;
 					runBTN.setDisable(false);
+					prefMenu.setDisable(false);
 					return null;
 				}
 				int exitVal = proc.waitFor();
@@ -491,6 +514,7 @@ public class MainApp extends Application {
 				outGob.terminate();
 				errGob.terminate();
 				runBTN.setDisable(false);
+				prefMenu.setDisable(false);
 				return null;
 			}
 		};
@@ -510,7 +534,7 @@ public class MainApp extends Application {
 		}
 		return null;
 	}
-	
+
 	/**
 	 * Adds text to grid at specified (col, row) and styles it in accordance to .ErrorText in mainViewer.css
 	 * @param grid = GridPane to add text to
@@ -519,10 +543,10 @@ public class MainApp extends Application {
 	 * @param row = row
 	 */
 	private void addErrorText(GridPane grid, String Text, int col, int row){
-		Label errorText = addText(grid, Text, col, row);
+		Label errorText = addText(grid, Text, col, row, true);
 		errorText.getStyleClass().add("ErrorText");
 	}
-	
+
 	/**
 	 * Adds text to grid at specified (col, row)
 	 * @param grid = GridPane to add text to
@@ -531,9 +555,13 @@ public class MainApp extends Application {
 	 * @param row = row to insert
 	 * @return Label that contains the text that was inserted (in case it needs to be modified)
 	 */
-	private Label addText(GridPane grid, String Text, int col, int row){
-		Node toReplace = getNodeAtIndex(grid, col, row); //finds Node at current location and replaces it
-		grid.getChildren().remove(toReplace);
+	private Label addText(GridPane grid, String Text, int col, int row, boolean replace){
+		Node toMove = getNodeAtIndex(grid, col, row); //finds Node at current location and replaces it
+		grid.getChildren().remove(toMove);
+		if(!replace){
+			grid.add(toMove, col, row+1, 2, 1);
+		}
+
 		Label newLabel = new Label(Text);
 		newLabel.setWrapText(true);
 		HBox HBOXtoAdd = new HBox(Constants.SPACING);
@@ -541,34 +569,18 @@ public class MainApp extends Application {
 		HBOXtoAdd.getChildren().add(newLabel);
 
 		grid.add(HBOXtoAdd, col, row, 2, 1);
-		
+		pStage.sizeToScene();
 		return newLabel;
 	}
 
 	private void addCompleteText(GridPane grid){
 		addText(grid,songField + " by "+artistField
-				+" downloaded successfully",0,4);
+				+" downloaded successfully",0,4, true);
 	}
 
-	public File getPreferencesFilePath(){
-		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
-		String filePath = prefs.get("filePath", null);
-		return (filePath != null) ? new File(filePath) : null;
-	}
-	
-	public void setPreferencesFilePath(GridPane grid, File fileToSet){
-		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
-		if (fileToSet != null){
-			prefs.put("filePath", fileToSet.getPath());
-			addText(grid, "Successfully Updated Preferences", 0, 4);
-		}
-		else{
-			prefs.remove("filePath");
-			addErrorText(grid, "Null File Passed into Preferences", 0, 4);
-		}
-	}
-
-	private void addSpinningProgressControl(GridPane grid, String labelText){
+	private void addSpinningProgressControl(GridPane grid, String labelText, boolean remove){
+		Node toMove = getNodeAtIndex(grid, 0, 4);
+		if(remove) grid.getChildren().remove(toMove);
 		addHBOX = new HBox(Constants.SPACING);
 		Label downloadingState = new Label(labelText);
 		ProgressIndicator progressIndicator = new ProgressIndicator();
@@ -595,8 +607,9 @@ public class MainApp extends Application {
 			add("-u");
 			add(PYTHON_SCRIPT);
 		}};
-		for (int i = 0; i < commands.length; i++)
+		for (int i = 0; i < commands.length; i++){
 			listCommand.add(commands[i]);
+		}
 		PY_COMMANDS = listCommand;
 	}
 
@@ -640,12 +653,99 @@ public class MainApp extends Application {
 		Platform.exit();
 		System.exit(0);
 	}
-	
+
 	private void ForceRestart(){
 		//asks program to halt execution and restarts
 		pulseToTerminate = true;
 		pStage.close();
 		start(new Stage());
+	}
+
+
+	public File getPreferencesFilePath(){
+		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
+		String filePath = prefs.get("filePath", null);
+		return (filePath != null) ? new File(filePath) : null;
+	}
+
+	public void setPreferencesFilePath(File file) {
+		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
+		if (file != null) {
+			prefs.put("filePath", file.getPath());
+		} else {
+			prefs.remove("filePath");
+		}
+	}
+
+	private void getPreferencesWindow(GridPane grid){
+		File prefFilePath = getPreferencesFilePath();
+		OptionsParser op = new OptionsParser(prefFilePath);
+
+		ModalPopup mp = new ModalPopup(op.getItunesPath(), op.getTempPath());
+		Stage stage = new Stage();
+		stage.initModality(Modality.APPLICATION_MODAL);
+		stage.initOwner(pStage.getScene().getWindow());
+		mp.start(stage);
+		options = mp.getOptions();
+		savePreferences();
+	}
+
+	//Called right before making python arguments list
+	private void getPreferences(){
+		if(options != null){
+			this.FILE_TYPE = options.file_type;
+			this.ITUNES_FILEPATH = options.itunes_path;
+			this.TEMP_FILEPATH = options.temp_path;
+			return;
+		}
+		File prefFilePath = getPreferencesFilePath();
+		OptionsParser op = new OptionsParser(prefFilePath);
+		this.FILE_TYPE = op.getFileType();
+		this.ITUNES_FILEPATH = op.getItunesPath();
+		this.TEMP_FILEPATH = op.getTempPath();
+	}
+
+	private void savePreferences(){
+		File f = getPreferencesFilePath();
+		if (f == null) {
+			System.out.println("nullFileFound");
+			f = new File(Constants.tempFilePath+File.separator+"ytDownloader");
+			try {
+				f.createNewFile();
+				myLogger.info("Made new preferences file at: "+f.getAbsolutePath());
+			} catch (IOException e) {
+				myLogger.severe(e.getMessage());
+			}
+			setPreferencesFilePath(f);
+			populateFileWithBoilerPlate(f);
+		}
+		OptionsParser op = new OptionsParser(f);
+		if(options != null){
+			op.setFileType(options.file_type);
+			op.setItunesPath(options.itunes_path);
+			op.save();
+		}
+	}
+
+	private void populateFileWithBoilerPlate(File f){
+		//boilerplate located within class as resource
+		try {
+			InputStream boilerplateStream = ClassLoader.getSystemResourceAsStream("YTDLSettings.json");
+			BufferedReader br = new BufferedReader(new InputStreamReader(boilerplateStream));
+			String line;
+			StringBuilder sb = new StringBuilder();
+			while ((line = br.readLine()) != null) {
+				sb.append(line);
+			}
+			br.close();
+			if(!f.exists()) f.createNewFile();
+			FileWriter fw = new FileWriter(f);
+			fw.write(sb.toString());
+			fw.close();
+		} catch (IOException e) {
+			myLogger.severe(e.getMessage());
+		}
+
 	}
 
 	private void initLogger(){

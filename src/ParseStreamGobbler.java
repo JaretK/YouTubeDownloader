@@ -133,7 +133,7 @@ class ParseStreamGobbler extends Thread
 		int newETA = extractETA(in);
 		
 		//print every 10% or every 5 seconds on ETA as determined by pafy
-		boolean shouldAdd = (newProgress >= (oldprogress + 10)) || (oldeta >= newETA + 2);
+		boolean shouldAdd = (newProgress >= (oldprogress + 10)) || (oldeta >= newETA + 3);
 		if (shouldAdd) {
 			//reset variables
 			oldprogress = newProgress;
