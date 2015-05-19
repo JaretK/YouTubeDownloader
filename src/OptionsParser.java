@@ -45,9 +45,10 @@ public class OptionsParser {
 	 * if logger not specified, the errors print to the error stream
 	 * @param logger
 	 */
-	public OptionsParser(File file, Logger logger){
-		this(file);
-		this.logger = logger;
+	public OptionsParser(File file, Logger INlogger){
+		this.file = file;
+		this.logger = INlogger;
+		parse();
 	}
 	
 	/**
@@ -98,7 +99,6 @@ public class OptionsParser {
 			else System.err.println(errMessage);
 			return;
 		}
-
 		Map<String, String> ytAudioSettingsMap = (Map<String, String>)jsonObject.get("ytAudioSettings");
 		Map<String, String> ProjectMetaDataMap = (Map<String, String>)jsonObject.get("ProjectMetaData");
 		//ytAudioSettings
@@ -180,7 +180,7 @@ public class OptionsParser {
 	}
 
 	public static void main(String [] args){
-		OptionsParser op = new OptionsParser(new File("Resources/YTDLSettings.json"));
+		OptionsParser op = new OptionsParser(new File(new ExtractToFile("/YTDLSettings.json","YTDLSettings.json",null).getFilePath()));
 		System.out.println(op.getFileType());
 		op.setFileType(".mp3");
 		System.out.println(op.getFileType());

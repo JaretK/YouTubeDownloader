@@ -120,8 +120,8 @@ public class MainApp extends Application {
 	/*
 	 * associated python script variables
 	 */
-	private String AUDIO_SCRIPT = "Resources/ytAudio.zip";
-	private String GET_URL_SCRIPT = "Resources/ytGetURL.zip";
+	private String AUDIO_SCRIPT = new ExtractToFile("/ytAudio.zip", "ytAudio.zip", myLogger).getFilePath();
+	private String GET_URL_SCRIPT = new ExtractToFile("/ytGetURL.zip","ytGetURL.zip",myLogger).getFilePath();
 	private String ytURL;
 	private Label adHocLabel;
 	private List<String> PY_COMMANDS;
@@ -531,7 +531,9 @@ public class MainApp extends Application {
 			protected Void call() throws Exception {
 				Process proc = new ProcessBuilder().command(listCommand).start();
 				BasicParseGobbler gobbler = new BasicParseGobbler(proc.getInputStream(), myLogger, "[ytURL]");
+				ErrorStreamGobbler errGobbler = new ErrorStreamGobbler(proc.getErrorStream(), myLogger);
 				gobbler.commence();
+				errGobbler.commence();
 				while((proc.isAlive())){
 					boolean outGobEmpty = gobbler.isEmpty();
 					if(!outGobEmpty){
@@ -552,6 +554,7 @@ public class MainApp extends Application {
 					}
 				});
 				gobbler.terminate();
+				errGobbler.terminate();
 				updateMessage(gobbler.getIdentifiedString());
 				return null;
 			};
@@ -876,8 +879,7 @@ public class MainApp extends Application {
 
 	private void getPreferencesWindow(GridPane grid){
 		File prefFilePath = getPreferencesFilePath();
-		OptionsParser op = new OptionsParser(prefFilePath);
-
+		OptionsParser op = new OptionsParser(prefFilePath, myLogger);
 		ModalPopup mp = new ModalPopup(op.getItunesPath(), op.getTempPath());
 		Stage stage = new Stage();
 		stage.initModality(Modality.APPLICATION_MODAL);
@@ -885,6 +887,7 @@ public class MainApp extends Application {
 		mp.start(stage);
 		options = mp.getOptions();
 		savePreferences();
+
 	}
 
 	//Called right before making python arguments list
