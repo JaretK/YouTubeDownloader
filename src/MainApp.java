@@ -108,7 +108,7 @@ public class MainApp extends Application {
 	private Stage pStage;
 	private Task<Void> pyTask;
 	private boolean pulseToTerminate = false;
-	private static final String initialOptionsText = "e.g. ytid";
+	private static final String initialOptionsText = "ytid=";
 
 	/*
 	 * logging object and associated DateFormat
