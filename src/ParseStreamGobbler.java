@@ -39,7 +39,7 @@ class ParseStreamGobbler extends Thread
 	private static final Pattern ETA_PATTERN = Pattern.compile("ETA:\\ \\[(.*?\\ )s\\]");
 	private int oldprogress = Integer.MIN_VALUE;
 	private int oldeta = Integer.MAX_VALUE;
-	private SpinningState spinningState = SpinningState.BEFORE;
+	private SpinningState spinningState;
 
 	ParseStreamGobbler(InputStream is, Logger logger, String identifier)
 	{
@@ -49,6 +49,7 @@ class ParseStreamGobbler extends Thread
 		this.buffer = new ConcurrentLinkedQueue<String>();
 		this.logger = logger;
 		this.identifier = identifier;
+		this.spinningState = SpinningState.BEFORE;
 	}
 	
 	public SpinningState getSpinState(){
