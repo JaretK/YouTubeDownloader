@@ -19,6 +19,8 @@
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -575,6 +577,7 @@ public class MainApp extends Application {
 							ITUNES_FILEPATH,
 							TEMP_FILEPATH,
 							ytURL);
+					System.out.println(PY_COMMANDS);
 					try {
 						handToPython(grid, PY_COMMANDS);
 					} catch (IOException | InterruptedException e) {
@@ -860,12 +863,39 @@ public class MainApp extends Application {
 			ForceRestart();
 		}
 	}
+	
+	private void writeJSONToFile(File fileToWrite) throws IOException{
+		String toWrite = new ExtractResource("/YTDLSettings.json", myLogger).toString();
+		System.out.println(toWrite);
+		FileWriter fw = new FileWriter(fileToWrite);
+		fw.write(toWrite);
+		fw.close();
+	}
 
 
 	public File getPreferencesFilePath(){
 		Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
 		String filePath = prefs.get("filePath", null);
-		return (filePath != null) ? new File(filePath) : null;
+		if (filePath == null) return null;
+		
+		File retFile = new File(filePath);
+		if(!retFile.exists())
+			try {
+				retFile.createNewFile();
+				writeJSONToFile(retFile);
+			} catch (IOException e) {
+				myLogger.warning(e.getMessage());
+			}
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(retFile));
+			if(br.readLine() == null){
+				writeJSONToFile(retFile);
+			}
+			br.close();
+		} catch (IOException e) {
+			myLogger.severe(e.getMessage());
+		}
+		return retFile;
 	}
 
 	public void setPreferencesFilePath(File file) {
@@ -899,7 +929,7 @@ public class MainApp extends Application {
 			return;
 		}
 		File prefFilePath = getPreferencesFilePath();
-		OptionsParser op = new OptionsParser(prefFilePath);
+		OptionsParser op = new OptionsParser(prefFilePath, myLogger);
 		this.FILE_TYPE = op.getFileType();
 		this.ITUNES_FILEPATH = op.getItunesPath();
 		this.TEMP_FILEPATH = op.getTempPath();
