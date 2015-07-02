@@ -19,7 +19,6 @@
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -825,7 +824,7 @@ public class MainApp extends Application {
 	}
 
 	private void ForceExit(){
-		//Exit. May throw a "ava has been detached already"
+		//Exit. May throw a "java has been detached already"
 		//error, but that isn't a problem 
 		Platform.exit();
 		System.exit(0);

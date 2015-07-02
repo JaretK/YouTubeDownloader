@@ -48,12 +48,17 @@ public class ExtractToFile {
 	}
 
 	public String getFilePath(){
+		/*
+		 * If file exists, delete it for overwrite and make new file
+		 * else, make new file
+		 */
 		String filePath = "";
 		try {
 			if(!fileExists())
 				filePath = makeFile();
 			else
-				filePath = tempFilePath + finalName;
+				new File(tempFilePath+finalName).delete();
+				filePath = makeFile();
 		} catch (IOException e) {
 			logger.severe(e.getMessage());
 		}
